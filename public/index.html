@@ -127,62 +127,6 @@ a{color:var(--pri);font-weight:700}
 </main>
 <div id="ovl"></div>
 
-<!-- Firestore Cloud Sync Engine -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
-    authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
-    projectId: "app-hoc-tieng-anh-b",
-    storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
-    messagingSenderId: "515402968386",
-    appId: "1:515402968386:web:f084580b5ac64118f92cdb",
-    measurementId: "G-TKSEBV4YY4"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const docRef = doc(db, "appData", "main");
-
-  let isRemoteUpdating = false;
-
-  window.syncToCloud = async function() {
-    if (isRemoteUpdating) return;
-    try {
-      const payload = {
-        topics: window.topics || [],
-        songs: window.songs || [],
-        cfg: window.cfg || {}
-      };
-      await setDoc(docRef, payload);
-    } catch(e) { console.error('Cloud Firestore Sync Error:', e); }
-  };
-
-  onSnapshot(docRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const remoteData = snapshot.data();
-      isRemoteUpdating = true;
-      if (remoteData.topics) {
-        window.topics = remoteData.topics;
-        try { localStorage.setItem('topics', JSON.stringify(remoteData.topics)); } catch(e){}
-      }
-      if (remoteData.songs) {
-        window.songs = remoteData.songs;
-        try { localStorage.setItem('songs', JSON.stringify(remoteData.songs)); } catch(e){}
-      }
-      if (remoteData.cfg) {
-        window.cfg = remoteData.cfg;
-        try { localStorage.setItem('cfg', JSON.stringify(remoteData.cfg)); } catch(e){}
-      }
-      if (window.render) window.render();
-      if (window.stars) window.stars();
-      setTimeout(() => { isRemoteUpdating = false; }, 300);
-    }
-  });
-</script>
-
 <script>
 const $=s=>document.querySelector(s);
 function el(t,a={},...k){const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else e.setAttribute(x,v)}k.flat().forEach(c=>e.append(c&&c.nodeType?c:document.createTextNode(c==null?'':c)));return e}
@@ -198,10 +142,6 @@ window.topics=[]; window.songs=[];
 let st={page:'home',topic:null,busy:''};
 window.cfg={voice:'',rate:'slow',stars:0};
 try{Object.assign(window.cfg,JSON.parse(localStorage.getItem('cfg')||'{}'))}catch(e){}
-const save=()=>{
-  try{localStorage.setItem('cfg',JSON.stringify(window.cfg))}catch(e){}
-  if(window.syncToCloud) window.syncToCloud();
-};
 
 const defaultTopics = [
   {id:'t1', name:'Transportation (Giao thông)', icon:'🚗', words:[
@@ -236,15 +176,6 @@ try{
 }catch(e){
   window.topics = defaultTopics; 
   window.songs = [];
-}
-
-const saveTopics=()=>{
-  try{localStorage.setItem('topics',JSON.stringify(window.topics))}catch(e){}
-  if(window.syncToCloud) window.syncToCloud();
-}
-const saveSongs=()=>{
-  try{localStorage.setItem('songs',JSON.stringify(window.songs))}catch(e){}
-  if(window.syncToCloud) window.syncToCloud();
 }
 
 let voices=[];
@@ -349,7 +280,7 @@ function importFullBackup() {
         if (data.stars !== undefined) window.cfg.stars = Number(data.stars) || 0;
         saveTopics(); saveSongs(); save();
         window.render();
-        alert('Đã khôi phục và đồng bộ lên Cloud Firestore thành công!');
+        alert('Đã khôi phục thành công!');
       } catch (err) { alert('Lỗi file backup: ' + err.message); }
     };
     reader.readAsText(f);
@@ -597,8 +528,6 @@ function quiz(list){
   draw();
 }
 
-try{ drawBar(); window.render(); }catch(e){console.error(e);}
-
 (function(){
   const SVG=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Bé Dơi Tím">
 <g class="wing-l"><path d="M34 62 Q4 34 8 82 Q16 72 24 86 Q26 74 36 78 Z" fill="#4b1d7a"/></g>
@@ -642,4 +571,98 @@ try{ drawBar(); window.render(); }catch(e){console.error(e);}
       r.onload=()=>{const im=new Image();im.onload=()=>{
         const S=240,k=Math.min(1,S/Math.max(im.width,im.height)),c=document.createElement('canvas');
         c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        try{localStorage.setItem(KEY,c.toDataURL
+        try{localStorage.setItem(KEY,c.toDataURL('image/png'))}catch(e){}
+        build()};im.src=r.result};r.readAsDataURL(file)};
+    f.click();
+  }
+  window.rebuildMascot=build;
+  build();
+})();
+</script>
+
+<!-- Firestore Cloud Sync Engine -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
+    authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
+    projectId: "app-hoc-tieng-anh-b",
+    storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
+    messagingSenderId: "515402968386",
+    appId: "1:515402968386:web:f084580b5ac64118f92cdb",
+    measurementId: "G-TKSEBV4YY4"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const docRef = doc(db, "appData", "main");
+
+  let isRemoteUpdating = false;
+
+  window.save = function() {
+    try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch(e){}
+    if (!isRemoteUpdating) {
+      setDoc(docRef, {
+        topics: window.topics || [],
+        songs: window.songs || [],
+        cfg: window.cfg || {}
+      }).catch(err => console.error("Firestore Save Error:", err));
+    }
+  };
+
+  window.saveTopics = function() {
+    try { localStorage.setItem('topics', JSON.stringify(window.topics)); } catch(e){}
+    if (!isRemoteUpdating) {
+      setDoc(docRef, {
+        topics: window.topics || [],
+        songs: window.songs || [],
+        cfg: window.cfg || {}
+      }).catch(err => console.error("Firestore Save Topics Error:", err));
+    }
+  };
+
+  window.saveSongs = function() {
+    try { localStorage.setItem('songs', JSON.stringify(window.songs)); } catch(e){}
+    if (!isRemoteUpdating) {
+      setDoc(docRef, {
+        topics: window.topics || [],
+        songs: window.songs || [],
+        cfg: window.cfg || {}
+      }).catch(err => console.error("Firestore Save Songs Error:", err));
+    }
+  };
+
+  onSnapshot(docRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const remoteData = snapshot.data();
+      isRemoteUpdating = true;
+      if (remoteData.topics) {
+        window.topics = remoteData.topics;
+        try { localStorage.setItem('topics', JSON.stringify(remoteData.topics)); } catch(e){}
+      }
+      if (remoteData.songs) {
+        window.songs = remoteData.songs;
+        try { localStorage.setItem('songs', JSON.stringify(remoteData.songs)); } catch(e){}
+      }
+      if (remoteData.cfg) {
+        window.cfg = remoteData.cfg;
+        try { localStorage.setItem('cfg', JSON.stringify(remoteData.cfg)); } catch(e){}
+      }
+      if (window.render) window.render();
+      if (window.stars) window.stars();
+      setTimeout(() => { isRemoteUpdating = false; }, 300);
+    }
+  }, (error) => {
+    console.error("Firestore Snapshot Error:", error);
+  });
+
+  try {
+    drawBar();
+    window.render();
+  } catch(e) { console.error(e); }
+</script>
+
+</body>
+</html>

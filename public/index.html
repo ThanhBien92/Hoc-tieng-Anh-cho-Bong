@@ -127,15 +127,14 @@ a{color:var(--pri);font-weight:700}
 </main>
 <div id="ovl"></div>
 
-<!-- Tích hợp Firebase Realtime Database & Firestore -->
+<!-- Firestore Cloud Sync Engine -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
     authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
-    databaseURL: "https://app-hoc-tieng-anh-b-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "app-hoc-tieng-anh-b",
     storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
     messagingSenderId: "515402968386",
@@ -144,29 +143,42 @@ a{color:var(--pri);font-weight:700}
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  const db = getFirestore(app);
+  const docRef = doc(db, "appData", "main");
 
-  // Đồng bộ Cloud Realtime
-  window.syncToCloud = function() {
+  let isRemoteUpdating = false;
+
+  window.syncToCloud = async function() {
+    if (isRemoteUpdating) return;
     try {
-      const data = {
+      const payload = {
         topics: window.topics || [],
         songs: window.songs || [],
         cfg: window.cfg || {}
       };
-      set(ref(db, 'appData'), data);
-    } catch(e) { console.error('Cloud Sync Error:', e); }
+      await setDoc(docRef, payload);
+    } catch(e) { console.error('Cloud Firestore Sync Error:', e); }
   };
 
-  // Lắng nghe dữ liệu thay đổi từ Cloud thời gian thực
-  onValue(ref(db, 'appData'), (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      if (data.topics) { window.topics = data.topics; localStorage.setItem('topics', JSON.stringify(data.topics)); }
-      if (data.songs) { window.songs = data.songs; localStorage.setItem('songs', JSON.stringify(data.songs)); }
-      if (data.cfg) { window.cfg = data.cfg; localStorage.setItem('cfg', JSON.stringify(data.cfg)); }
+  onSnapshot(docRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const remoteData = snapshot.data();
+      isRemoteUpdating = true;
+      if (remoteData.topics) {
+        window.topics = remoteData.topics;
+        try { localStorage.setItem('topics', JSON.stringify(remoteData.topics)); } catch(e){}
+      }
+      if (remoteData.songs) {
+        window.songs = remoteData.songs;
+        try { localStorage.setItem('songs', JSON.stringify(remoteData.songs)); } catch(e){}
+      }
+      if (remoteData.cfg) {
+        window.cfg = remoteData.cfg;
+        try { localStorage.setItem('cfg', JSON.stringify(remoteData.cfg)); } catch(e){}
+      }
       if (window.render) window.render();
       if (window.stars) window.stars();
+      setTimeout(() => { isRemoteUpdating = false; }, 300);
     }
   });
 </script>
@@ -269,7 +281,7 @@ function guidePage(a){
   d.innerHTML=`
 <div class="msg" style="margin-bottom:10px"><b>📘 Hướng dẫn đưa app lên mạng</b><br>Dành cho bố mẹ. Làm 1 lần, sau đó bé mở app bằng đường link trên mọi thiết bị.</div>
 <details open><summary>0️⃣ Đồng bộ tự động giữa nhiều máy</summary>
-<div class="tip">🎉 App của bạn đã kết nối thành công với <b>Firebase Realtime Database</b>. Mọi thay đổi dữ liệu (thêm từ, bài hát, số sao) sẽ tự động đồng bộ tức thì trên tất cả các máy!</div>
+<div class="tip">🎉 App của bạn đã kết nối thành công với <b>Cloud Firestore</b>. Mọi thay đổi dữ liệu sẽ tự động đồng bộ tức thì trên tất cả các máy!</div>
 </details>`;
   a.append(d);
 }
@@ -337,7 +349,7 @@ function importFullBackup() {
         if (data.stars !== undefined) window.cfg.stars = Number(data.stars) || 0;
         saveTopics(); saveSongs(); save();
         window.render();
-        alert('Đã khôi phục và đồng bộ lên đám mây thành công!');
+        alert('Đã khôi phục và đồng bộ lên Cloud Firestore thành công!');
       } catch (err) { alert('Lỗi file backup: ' + err.message); }
     };
     reader.readAsText(f);
@@ -630,13 +642,4 @@ try{ drawBar(); window.render(); }catch(e){console.error(e);}
       r.onload=()=>{const im=new Image();im.onload=()=>{
         const S=240,k=Math.min(1,S/Math.max(im.width,im.height)),c=document.createElement('canvas');
         c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        try{localStorage.setItem(KEY,c.toDataURL('image/png'))}catch(e){}
-        build()};im.src=r.result};r.readAsDataURL(file)};
-    f.click();
-  }
-  window.rebuildMascot=build;
-  build();
-})();
-</script>
-</body>
-</html>
+        try{localStorage.setItem(KEY,c.toDataURL

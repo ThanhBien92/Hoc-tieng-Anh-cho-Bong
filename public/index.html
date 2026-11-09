@@ -436,7 +436,7 @@ Quy tắc:
 5. "vi" của từ: nghĩa tiếng Việt ngắn gọn. "emoji": 1 emoji phù hợp, nếu không có thì "🌟".
 6. Tuần không có từ vựng (ví dụ ôn tập): "words" và "sentences" là [], nội dung ghi vào "notes".
 7. Chỗ nào chữ mờ hoặc không chắc: giữ nguyên chữ nhìn thấy và thêm "(?)" phía sau, tuyệt đối không tự đoán.`;
-const copyText = txt => { try{ navigator.clipboard.writeText(txt).then(()=>alert('Đã sao chép'),()=>alert('Không sao chép được, hãy chép tay')) }catch(e){ alert('Không sao chép được, hãy chép tay') } };
+const copyText = txt => { try{ navigator.clipboard.writeText(txt).then(()=>alert('Đã sao chép'),()=>alert('Không sao chép được, hãy chép tay')) }catch(e){ alert('Not copied') } };
 
 function importJsonModal(){
   const ta = el('textarea',{placeholder:'Dán đoạn JSON cấu trúc chủ đề vào đây...',style:'width:100%;height:220px;font:inherit;border-radius:14px;padding:10px;border:2px solid var(--pri);background:var(--card);color:var(--ink)'});
@@ -819,5 +819,25 @@ try{
   build();
 })();
 </script>
+
+<!-- Cấu hình Firebase SDK được tích hợp vào cuối file -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
+      authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
+      projectId: "app-hoc-tieng-anh-b",
+      storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
+      messagingSenderId: "515402968386",
+      appId: "1:515402968386:web:f084580b5ac64118f92cdb",
+      measurementId: "G-TKSEBV4YY4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+</script>
+
 </body>
 </html>

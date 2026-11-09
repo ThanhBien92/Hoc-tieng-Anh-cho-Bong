@@ -126,6 +126,51 @@ a{color:var(--pri);font-weight:700}
   <div id="app"></div>
 </main>
 <div id="ovl"></div>
+
+<!-- Tích hợp Firebase Realtime Database & Firestore -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
+    authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
+    databaseURL: "https://app-hoc-tieng-anh-b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "app-hoc-tieng-anh-b",
+    storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
+    messagingSenderId: "515402968386",
+    appId: "1:515402968386:web:f084580b5ac64118f92cdb",
+    measurementId: "G-TKSEBV4YY4"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Đồng bộ Cloud Realtime
+  window.syncToCloud = function() {
+    try {
+      const data = {
+        topics: window.topics || [],
+        songs: window.songs || [],
+        cfg: window.cfg || {}
+      };
+      set(ref(db, 'appData'), data);
+    } catch(e) { console.error('Cloud Sync Error:', e); }
+  };
+
+  // Lắng nghe dữ liệu thay đổi từ Cloud thời gian thực
+  onValue(ref(db, 'appData'), (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      if (data.topics) { window.topics = data.topics; localStorage.setItem('topics', JSON.stringify(data.topics)); }
+      if (data.songs) { window.songs = data.songs; localStorage.setItem('songs', JSON.stringify(data.songs)); }
+      if (data.cfg) { window.cfg = data.cfg; localStorage.setItem('cfg', JSON.stringify(data.cfg)); }
+      if (window.render) window.render();
+      if (window.stars) window.stars();
+    }
+  });
+</script>
+
 <script>
 const $=s=>document.querySelector(s);
 function el(t,a={},...k){const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else e.setAttribute(x,v)}k.flat().forEach(c=>e.append(c&&c.nodeType?c:document.createTextNode(c==null?'':c)));return e}
@@ -137,11 +182,14 @@ try{
   ['🎈','🪁','🎈'].forEach((b,i)=>{const d=el('div',{class:'bal'},b);d.style.left=(15+i*32)+'%';d.style.animationDuration=(28+i*9)+'s';d.style.animationDelay=(-i*11)+'s';s.append(d)});
 }catch(e){}
 
-let topics=[],songs=[];
+window.topics=[]; window.songs=[];
 let st={page:'home',topic:null,busy:''};
-let cfg={voice:'',rate:'slow',stars:0};
-try{Object.assign(cfg,JSON.parse(localStorage.getItem('cfg')||'{}'))}catch(e){}
-const save=()=>{try{localStorage.setItem('cfg',JSON.stringify(cfg))}catch(e){}};
+window.cfg={voice:'',rate:'slow',stars:0};
+try{Object.assign(window.cfg,JSON.parse(localStorage.getItem('cfg')||'{}'))}catch(e){}
+const save=()=>{
+  try{localStorage.setItem('cfg',JSON.stringify(window.cfg))}catch(e){}
+  if(window.syncToCloud) window.syncToCloud();
+};
 
 const defaultTopics = [
   {id:'t1', name:'Transportation (Giao thông)', icon:'🚗', words:[
@@ -168,34 +216,36 @@ try{
   const saved = localStorage.getItem('topics');
   if(saved) {
     const parsed = JSON.parse(saved);
-    if(Array.isArray(parsed) && parsed.length > 0) {
-      topics = parsed;
-    } else {
-      topics = defaultTopics;
-    }
+    window.topics = (Array.isArray(parsed) && parsed.length > 0) ? parsed : defaultTopics;
   } else {
-    topics = defaultTopics;
+    window.topics = defaultTopics;
   }
-  songs = JSON.parse(localStorage.getItem('songs')) || [];
+  window.songs = JSON.parse(localStorage.getItem('songs')) || [];
 }catch(e){
-  topics = defaultTopics; 
-  songs = [];
+  window.topics = defaultTopics; 
+  window.songs = [];
 }
 
-const saveTopics=()=>{try{localStorage.setItem('topics',JSON.stringify(topics))}catch(e){}}
-const saveSongs=()=>{try{localStorage.setItem('songs',JSON.stringify(songs))}catch(e){}}
+const saveTopics=()=>{
+  try{localStorage.setItem('topics',JSON.stringify(window.topics))}catch(e){}
+  if(window.syncToCloud) window.syncToCloud();
+}
+const saveSongs=()=>{
+  try{localStorage.setItem('songs',JSON.stringify(window.songs))}catch(e){}
+  if(window.syncToCloud) window.syncToCloud();
+}
 
 let voices=[];
 function loadV(){try{voices=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));drawBar()}catch(e){}}
 if('speechSynthesis'in window){speechSynthesis.onvoiceschanged=loadV;loadV()}
 const clean=t=>String(t||'').replace(/^\s*[AB]\s*:\s*/i,'').replace(/\s*\/\s*/g,' or ');
-function mk(t){const u=new SpeechSynthesisUtterance(clean(t));u.lang='en-US';const v=voices.find(v=>v.name===cfg.voice);if(v)u.voice=v;u.rate=cfg.rate==='slow'?.6:.95;return u}
+function mk(t){const u=new SpeechSynthesisUtterance(clean(t));u.lang='en-US';const v=voices.find(v=>v.name===window.cfg.voice);if(v)u.voice=v;u.rate=window.cfg.rate==='slow'?.6:.95;return u}
 function say(t){if(!t||!('speechSynthesis'in window))return;speechSynthesis.cancel();speechSynthesis.speak(mk(t))}
 function sayAll(list){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();list.forEach(t=>speechSynthesis.speak(mk(t)))}
 const viText=v=>{v=String(v||'').trim();return v&&!/^\(/.test(v)?'('+v+')':v};
 function drawBar(){const b=$('#vbar');if(!b)return;b.replaceChildren();
-const sv=el('select',{onchange:e=>{cfg.voice=e.target.value;save();say('Hello')}},el('option',{value:''},'🗣️ Giọng mặc định'),...voices.map(v=>el('option',{value:v.name},v.name+' ('+v.lang+')')));sv.value=cfg.voice;
-const sr=el('select',{onchange:e=>{cfg.rate=e.target.value;save()}},el('option',{value:'slow'},'🐢 Đọc chậm'),el('option',{value:'normal'},'🐇 Đọc bình thường'));sr.value=cfg.rate;
+const sv=el('select',{onchange:e=>{window.cfg.voice=e.target.value;save();say('Hello')}},el('option',{value:''},'🗣️ Giọng mặc định'),...voices.map(v=>el('option',{value:v.name},v.name+' ('+v.lang+')')));sv.value=window.cfg.voice;
+const sr=el('select',{onchange:e=>{window.cfg.rate=e.target.value;save()}},el('option',{value:'slow'},'🐢 Đọc chậm'),el('option',{value:'normal'},'🐇 Đọc bình thường'));sr.value=window.cfg.rate;
 b.append(sv,sr)}
 
 function fileToBase64(file, maxDim) {
@@ -214,128 +264,35 @@ function fileToBase64(file, maxDim) {
 function pick(multi,cb,acc){const i=el('input',{type:'file',accept:acc||'image/*'});if(multi)i.multiple=true;i.onchange=()=>{if(i.files.length)cb([...i.files])};i.click()}
 const pic=(w,onclick)=>{const p=el('div',{class:'pic',onclick},w.img?el('img',{src:w.img,alt:w.en}):(w.emoji||'🖼️'));return p};
 
-
 function guidePage(a){
   const d=el('div',{class:'guide'});
   d.innerHTML=`
 <div class="msg" style="margin-bottom:10px"><b>📘 Hướng dẫn đưa app lên mạng</b><br>Dành cho bố mẹ. Làm 1 lần, sau đó bé mở app bằng đường link trên mọi thiết bị.</div>
-
-<details open><summary>0️⃣ Vì sao phải đưa lên mạng?</summary>
-<ul>
-<li>Mở file HTML trực tiếp từ máy (<code>file://</code>) thì YouTube chặn phát video (lỗi cấu hình / Error 153) vì không biết trang nhúng đến từ đâu.</li>
-<li>Đưa lên web (<code>https://</code>) thì video phát bình thường.</li>
-</ul>
-<div class="tip">💡 Ví dụ: như bán hàng ở chợ, nếu không có sạp (địa chỉ web) thì khách (YouTube) không biết bạn là ai nên không cho "bày bán" (phát video) cùng.</div>
-<div class="tip">⚠️ <b>Bắt buộc đọc:</b> dữ liệu (chủ đề, ảnh, bài hát) lưu trong trình duyệt, theo từng <u>thiết bị + địa chỉ web</u>. Đổi link hoặc đổi máy là thấy app trống. Trước khi chuyển: vào tab Chủ đề bấm <b>💾 Backup Toàn Bộ App</b>; sang link mới bấm <b>🔄 Restore Backup</b>.<br>File backup gồm: chủ đề, hình ảnh, bài hát, số sao, cài đặt giọng đọc, ảnh linh vật. <u>Không</u> gồm Gemini API Key (hãy nhập lại).</div>
-</details>
-
-<details><summary>1️⃣ Chọn nền tảng nào?</summary>
-<table>
-<tr><th></th><th>Netlify</th><th>GitHub Pages</th><th>Firebase Hosting</th></tr>
-<tr><td>Độ dễ</td><td>Dễ nhất (kéo thả)</td><td>Trung bình</td><td>Khó hơn (dùng dòng lệnh)</td></tr>
-<tr><td>Ưu</td><td>Không cần cài gì, có link ngay</td><td>Lưu được lịch sử sửa code</td><td>Hạ tầng Google, tên miền web.app</td></tr>
-<tr><td>Nhược</td><td>Link không đăng ký có thể bị xóa sau thời gian ngắn</td><td>Tài khoản miễn phí thường cần repo Public</td><td>Cần cài Node.js và gõ lệnh</td></tr>
-</table>
-<div class="tip">👉 Gợi ý: bắt đầu với <b>Netlify</b>. Các gói miễn phí và giới hạn có thể thay đổi, hãy xem trang giá của từng nền tảng.</div>
-</details>
-
-<details><summary>2️⃣ Chuẩn bị thư mục (dùng chung cho cả 3)</summary>
-<p>Giải nén file <code>be-hoc-tieng-anh-deploy.zip</code>, bạn sẽ có:</p>
-<pre>be-hoc-tieng-anh-deploy/
-├─ public/index.html        ← chính là app
-├─ netlify.toml             ← cấu hình Netlify
-├─ firebase.json            ← cấu hình Firebase
-├─ .firebaserc              ← điền ID project Firebase
-└─ .github/workflows/pages.yml  ← cấu hình GitHub Pages</pre>
-<ul>
-<li>Muốn cập nhật app: thay file <code>public/index.html</code> bằng bản mới (giữ đúng tên <code>index.html</code>), rồi đưa lên lại.</li>
-<li>Các file cấu hình đã bật sẵn chế độ gửi "nguồn trang" (Referrer-Policy) để YouTube nhận diện đúng.</li>
-</ul>
-</details>
-
-<details><summary>3️⃣ Netlify (khuyên dùng)</summary>
-<b>Cách A: Kéo thả (không cần cài gì)</b>
-<ol>
-<li>Vào <code>app.netlify.com</code>, đăng ký/đăng nhập (nên đăng ký để link giữ lâu dài).</li>
-<li>Chọn <b>Add new site → Deploy manually</b> (hoặc vào <code>app.netlify.com/drop</code>).</li>
-<li>Kéo <b>thư mục <code>public</code></b> (không kéo cả thư mục ngoài) vào khung.</li>
-<li>Chờ vài giây, Netlify cấp link dạng <code>https://ten-ngau-nhien.netlify.app</code>.</li>
-<li>Đổi tên đẹp: <b>Site configuration → Change site name</b>.</li>
-<li>Cập nhật sau này: vào tab <b>Deploys</b>, kéo thả lại thư mục <code>public</code> mới.</li>
-</ol>
-<b>Cách B: Nối với GitHub (tự cập nhật khi sửa code)</b>
-<ol>
-<li>Đưa code lên GitHub (xem mục 5).</li>
-<li>Netlify: <b>Add new site → Import an existing project → GitHub</b>, chọn repo.</li>
-<li><b>Build command</b>: để trống. <b>Publish directory</b>: <code>public</code> (file <code>netlify.toml</code> đã khai báo sẵn).</li>
-<li>Bấm <b>Deploy</b>.</li>
-</ol>
-</details>
-
-<details><summary>4️⃣ Firebase Hosting</summary>
-<ol>
-<li>Cài Node.js bản LTS từ <code>nodejs.org</code>.</li>
-<li>Vào <code>console.firebase.google.com</code> → <b>Create a project</b>, đặt tên, ghi lại <b>Project ID</b> (tắt Google Analytics cũng được).</li>
-<li>Mở file <code>.firebaserc</code>, thay <code>YOUR_PROJECT_ID</code> bằng Project ID của bạn.</li>
-<li>Mở Terminal/CMD tại thư mục <code>be-hoc-tieng-anh-deploy</code>, gõ lần lượt:
-<pre>npm install -g firebase-tools
-firebase login
-firebase deploy --only hosting</pre></li>
-<li>Xong, link có dạng <code>https://PROJECT_ID.web.app</code>.</li>
-<li>Cập nhật sau này: thay <code>public/index.html</code> rồi gõ lại lệnh <code>firebase deploy --only hosting</code>.</li>
-</ol>
-<div class="tip">Nếu báo lỗi không có quyền/ chưa bật Hosting: vào Firebase Console → mục <b>Hosting</b> → <b>Get started</b>, rồi chạy lại lệnh deploy.</div>
-</details>
-
-<details><summary>5️⃣ GitHub Pages</summary>
-<ol>
-<li>Đăng ký <code>github.com</code>, bấm <b>New repository</b>, đặt tên (VD <code>be-hoc-tieng-anh</code>), chọn <b>Public</b>.</li>
-<li>Đưa toàn bộ nội dung thư mục giải nén lên repo. Cách dễ: bấm <b>uploading an existing file</b> và kéo thả, rồi <b>Commit changes</b>.</li>
-<li><b>Lưu ý:</b> nếu thư mục ẩn <code>.github</code> không tải lên được, bấm <b>Add file → Create new file</b>, gõ tên <code>.github/workflows/pages.yml</code> rồi dán nội dung file <code>pages.yml</code> trong gói vào.</li>
-<li>Vào <b>Settings → Pages → Build and deployment → Source</b>, chọn <b>GitHub Actions</b>.</li>
-<li>Vào tab <b>Actions</b>, đợi lượt chạy có dấu ✅ (nếu chưa chạy, bấm <b>Run workflow</b>).</li>
-<li>Link có dạng <code>https://TEN-GITHUB.github.io/TEN-REPO/</code>.</li>
-</ol>
-<b>Hoặc dùng dòng lệnh (có cài Git):</b>
-<pre>git init
-git add .
-git commit -m "first version"
-git branch -M main
-git remote add origin https://github.com/TEN-GITHUB/TEN-REPO.git
-git push -u origin main</pre>
-<div class="tip">💡 Ví dụ: GitHub như kho chứa hàng, Pages là quầy trưng bày. Bạn cất hàng vào kho, quầy tự lấy hàng ra bày.</div>
-</details>
-
-<details><summary>6️⃣ Kiểm tra &amp; xử lý lỗi</summary>
-<ul>
-<li><b>Video vẫn không phát:</b> chắc chắn địa chỉ bắt đầu bằng <code>https://</code>; bấm Ctrl+F5 (hoặc xóa cache) rồi thử lại. Nếu chỉ một vài video lỗi, có thể chủ kênh đã tắt quyền nhúng. Hãy thử video khác hoặc bấm "Mở trên YouTube".</li>
-<li><b>Trang trắng / 404:</b> file phải tên đúng <code>index.html</code> và nằm trong thư mục <code>public</code>.</li>
-<li><b>App trống dữ liệu:</b> bạn đang ở link/thiết bị mới. Dùng <b>Restore Backup</b> với file đã backup.</li>
-<li><b>Bảo mật:</b> trang online ai có link cũng mở được. Đừng ghi thông tin riêng của bé vào app. Không dán API key vào code, key Gemini chỉ nhập trong ô app hỏi (lưu ở trình duyệt của bạn).</li>
-</ul>
+<details open><summary>0️⃣ Đồng bộ tự động giữa nhiều máy</summary>
+<div class="tip">🎉 App của bạn đã kết nối thành công với <b>Firebase Realtime Database</b>. Mọi thay đổi dữ liệu (thêm từ, bài hát, số sao) sẽ tự động đồng bộ tức thì trên tất cả các máy!</div>
 </details>`;
   a.append(d);
 }
 
-function nav(){const n=$('#nav');if(!n)return;n.replaceChildren();[['home','🏠','Chủ đề'],['song','🎵','Bài hát'],['review','⭐','Ôn tập'],['guide','📘','Hướng dẫn']].forEach(([k,i,l])=>n.append(el('button',{class:st.page===k?'on':'',onclick:()=>{st.page=k;st.topic=null;render()}},el('span',{class:'ni'},i),l)));stars()}
-function render(){nav();const a=$('#app');if(!a)return;a.replaceChildren();
+function nav(){const n=$('#nav');if(!n)return;n.replaceChildren();[['home','🏠','Chủ đề'],['song','🎵','Bài hát'],['review','⭐','Ôn tập'],['guide','📘','Hướng dẫn']].forEach(([k,i,l])=>n.append(el('button',{class:st.page===k?'on':'',onclick:()=>{st.page=k;st.topic=null;window.render()}},el('span',{class:'ni'},i),l)));stars()}
+window.render=function(){nav();const a=$('#app');if(!a)return;a.replaceChildren();
 if(st.page==='home')st.topic?viewTopic(a):home(a);else if(st.page==='song')songPage(a);else if(st.page==='guide')guidePage(a);else reviewPage(a)}
 
-function stars(){const s=$('#stars');if(s)s.textContent='⭐ '+(cfg.stars||0)}
+window.stars=function(){const s=$('#stars');if(s)s.textContent='⭐ '+(window.cfg.stars||0)}
 let ac;function beep(f,d){try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;g.gain.value=.15;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.stop(ac.currentTime+d)}catch(e){}}
 function jingle(){beep(1320,.5);setTimeout(()=>beep(1760,.6),150);const b=$('#bell');if(b){b.classList.remove('ring');void b.offsetWidth;b.classList.add('ring')}}
 function pop(e){e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop')}
 function confetti(n){const f=['⭐','🎈','✨','🎉','🔔'];for(let i=0;i<n;i++){const s=el('div',{class:'cf'},f[i%5]);s.style.left=Math.random()*100+'%';s.style.animationDuration=(1.5+Math.random()*1.5)+'s';s.style.fontSize=(20+Math.random()*24)+'px';document.body.append(s);setTimeout(()=>s.remove(),3200)}}
 function cheer(){beep(880,.2);setTimeout(()=>beep(1175,.3),120);confetti(8)}
 
-function uplWordImg(t,i){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.words[i].img=b64;saveTopics();render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
-function uplTopicImg(t){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.coverImg=b64;saveTopics();render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
+function uplWordImg(t,i){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.words[i].img=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
+function uplTopicImg(t){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.coverImg=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
 
 function renameTopic(t){
   const inp=el('input',{type:'text',value:t.name,style:'width:100%;margin-bottom:10px'});
   const close=modal('✏️ Đổi tên chủ đề', inp, el('div',{class:'ctl'},el('button',{class:'btn',onclick:()=>{
     const newName=inp.value.trim();
-    if(newName){t.name=newName;saveTopics();close();render()}
+    if(newName){t.name=newName;saveTopics();close();window.render()}
   }},'Lưu tên')));
 }
 
@@ -346,11 +303,11 @@ const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
 
 function collectBackup(){
-  const {stars:_s, ...settings} = cfg;
+  const {stars:_s, ...settings} = window.cfg;
   return {
     app: 'BeHocTiengAnh', version: 2, exportDate: new Date().toISOString(),
-    stars: Number(cfg.stars)||0,
-    topics: topics, songs: songs, settings: settings,
+    stars: Number(window.cfg.stars)||0,
+    topics: window.topics, songs: window.songs, settings: settings,
     mascot: lsGet(MASCOT_KEY)
   };
 }
@@ -366,8 +323,6 @@ function exportFullBackup() {
   a.download = 'BeHocTiengAnh_FullBackup_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + '.json';
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  const nWords = data.topics.reduce((n,t)=>n+((t.words||[]).length),0);
-  alert('Đã tạo file backup:\n• ' + data.topics.length + ' chủ đề (' + nWords + ' từ, gồm hình ảnh)\n• ' + data.songs.length + ' bài hát\n• ' + data.stars + ' sao\n• Cài đặt giọng đọc\n• Ảnh linh vật riêng: ' + (data.mascot ? 'có' : 'không') + '\n• Dung lượng: ' + (jsonStr.length/1048576).toFixed(2) + ' MB\n\nLưu ý: file không chứa Gemini API Key.');
 }
 
 function importFullBackup() {
@@ -376,27 +331,14 @@ function importFullBackup() {
     reader.onload = e => {
       try {
         const data = JSON.parse(e.target.result);
-        const hasAny = Array.isArray(data.topics) || Array.isArray(data.songs) || data.stars !== undefined || data.cfg || data.settings;
-        if (!hasAny) throw new Error('Không thấy dữ liệu của app trong file này.');
-        const oldStars = (data.cfg && data.cfg.stars);
-        const stars_ = data.stars !== undefined ? data.stars : oldStars;
-        const info = '• ' + (Array.isArray(data.topics) ? data.topics.length : 0) + ' chủ đề\n• ' + (Array.isArray(data.songs) ? data.songs.length : 0) + ' bài hát\n• ' + (stars_ !== undefined ? Number(stars_)||0 : 'giữ nguyên') + ' sao\n• Ảnh linh vật: ' + (data.mascot ? 'có' : 'không');
-        if (!confirm('Khôi phục từ file backup?\n' + info + '\n\nDữ liệu hiện tại trên thiết bị này sẽ bị THAY THẾ.')) return;
-        const failed = [];
-        if (Array.isArray(data.topics)) { topics = data.topics; if (!lsSet('topics', JSON.stringify(topics))) failed.push('chủ đề / hình ảnh'); }
-        if (Array.isArray(data.songs)) { songs = data.songs; if (!lsSet('songs', JSON.stringify(songs))) failed.push('bาร์ hát'); }
-        const st = data.settings || (data.cfg ? (({stars:_x, ...r}) => r)(data.cfg) : null);
-        if (st) Object.assign(cfg, st);
-        if (stars_ !== undefined) cfg.stars = Number(stars_) || 0;
-        if (!lsSet('cfg', JSON.stringify(cfg))) failed.push('số sao / cài đặt');
-        if (data.mascot) { if (!lsSet(MASCOT_KEY, data.mascot)) failed.push('ảnh linh vật'); }
-        else if (data.version >= 2) { try { localStorage.removeItem(MASCOT_KEY) } catch(e){} }
-        if (window.rebuildMascot) window.rebuildMascot();
-        stars(); render();
-        alert(failed.length ? 'Khôi phục chưa đầy đủ: không lưu được ' + failed.join(', ') + ' (bộ nhớ trình duyệt đầy).' : 'Đã khôi phục thành công!');
-      } catch (err) {
-        alert('File backup không hợp lệ: ' + err.message);
-      }
+        if (Array.isArray(data.topics)) window.topics = data.topics;
+        if (Array.isArray(data.songs)) window.songs = data.songs;
+        if (data.settings) Object.assign(window.cfg, data.settings);
+        if (data.stars !== undefined) window.cfg.stars = Number(data.stars) || 0;
+        saveTopics(); saveSongs(); save();
+        window.render();
+        alert('Đã khôi phục và đồng bộ lên đám mây thành công!');
+      } catch (err) { alert('Lỗi file backup: ' + err.message); }
     };
     reader.readAsText(f);
   }, 'application/json');
@@ -411,9 +353,9 @@ function home(a){
   a.append(topBar);
 
   const g=el('div',{class:'grid'});
-  topics.forEach((t,i)=>{
+  window.topics.forEach((t,i)=>{
     const thumbContent = t.coverImg ? el('img',{src:t.coverImg,alt:t.name}) : (t.icon||'📘');
-    const tile=el('div',{class:'tile',onclick:()=>{st.topic=t.id;render()}},
+    const tile=el('div',{class:'tile',onclick:()=>{st.topic=t.id;window.render()}},
       el('button',{class:'topic-edit',title:'Đổi ảnh bìa',onclick:e=>{e.stopPropagation();uplTopicImg(t)}},'📷'),
       el('div',{class:'tile-thumb'},thumbContent),
       el('div',{class:'nm'},t.name)
@@ -425,17 +367,7 @@ function home(a){
 }
 
 const GEMINI_JSON_PROMPT = `Bạn là trợ lý chuyển đề cương tiếng Anh mầm non thành JSON. Tôi gửi kèm ảnh đề cương. Hãy đọc kỹ ảnh và chỉ trả về MỘT khối JSON (không giải thích thêm), đúng cấu trúc:
-
-{"weeks":[{"week":"Tuần 1","title":"Land transportation + Emergency transportation (Phương tiện giao thông đường bộ và khẩn cấp)","words":[{"en":"Road","vi":"Con đường","emoji":"🛣️"}],"sentences":[{"en":"A: What's this?","vi":"(Hỏi: Đây là cái gì?)"},{"en":"B: This is a taxi.","vi":"(Đáp: Đây là xe taxi.)"}],"notes":["Song: ..."]}]}
-
-Quy tắc:
-1. Mỗi dòng "Tuần" trong bảng = 1 phần tử của "weeks". "title" = tên chủ đề ghi trong ảnh (kèm phần tiếng Việt trong ngoặc nếu có).
-2. Cột "Từ vựng và bài hát": mọi từ vựng đưa vào "words", giữ nguyên tiếng Anh, không thêm bớt. Tên bài hát / Story Time đưa vào "notes", KHÔNG đưa vào "words".
-3. Cột "Cấu trúc câu": chép NGUYÊN VĂN từng câu vào "sentences" theo đúng thứ tự trong ảnh, mỗi câu 1 phần tử, giữ tiền tố "A:" / "B:" và giữ nguyên dấu "/". Không bỏ sót, không gộp, không tự thêm câu.
-4. "vi" của câu: dịch ngắn gọn, tự nhiên cho bé, BẮT BUỘC nằm trong ngoặc đơn. Câu A hỏi bắt đầu "(Hỏi: ...)", câu B trả lời bắt đầu "(Đáp: ...)", câu A nói một mình (không phải câu hỏi) bắt đầu "(Bé nói: ...)".
-5. "vi" của từ: nghĩa tiếng Việt ngắn gọn. "emoji": 1 emoji phù hợp, nếu không có thì "🌟".
-6. Tuần không có từ vựng (ví dụ ôn tập): "words" và "sentences" là [], nội dung ghi vào "notes".
-7. Chỗ nào chữ mờ hoặc không chắc: giữ nguyên chữ nhìn thấy và thêm "(?)" phía sau, tuyệt đối không tự đoán.`;
+{"weeks":[{"week":"Tuần 1","title":"Land transportation","words":[{"en":"Road","vi":"Con đường","emoji":"🛣️"}],"sentences":[{"en":"A: What's this?","vi":"(Hỏi: Đây là cái gì?)"},{"en":"B: This is a taxi.","vi":"(Đáp: Đây là xe taxi.)"}],"notes":["Song: ..."]}]}`;
 const copyText = txt => { try{ navigator.clipboard.writeText(txt).then(()=>alert('Đã sao chép'),()=>alert('Không sao chép được')) }catch(e){ alert('Not copied') } };
 
 function importJsonModal(){
@@ -447,12 +379,12 @@ function importJsonModal(){
       const weeksArr = Array.isArray(data) ? data : (data.weeks || data.topics || []);
       const cleanS = arr => (Array.isArray(arr)?arr:[]).filter(x=>x&&(x.en||x.vi)).map(x=>({en:String(x.en||''),vi:String(x.vi||'')}));
       weeksArr.forEach((w, idx)=>{
-        const tName = w.week ? (w.week + (w.title ? ': ' + w.title : '')) : (w.name || w.title || ('Chủ đề ' + (topics.length + 1)));
+        const tName = w.week ? (w.week + (w.title ? ': ' + w.title : '')) : (w.name || w.title || ('Chủ đề ' + (window.topics.length + 1)));
         const wordsArr = (w.words || []).map(x => ({en: x.en || '', vi: x.vi || '', emoji: x.emoji || '🌟', sentences: cleanS(x.sentences)}));
         const sents = cleanS(w.sentences);
         const notes = Array.isArray(w.notes) ? w.notes.map(String) : [];
         if(wordsArr.length > 0 || sents.length > 0 || notes.length > 0){
-          topics.push({id: 't' + Date.now() + '_' + idx, name: tName, icon: w.icon || '🚀', words: wordsArr, sentences: sents, notes: notes});
+          window.topics.push({id: 't' + Date.now() + '_' + idx, name: tName, icon: w.icon || '🚀', words: wordsArr, sentences: sents, notes: notes});
           addedCount++;
         }
       });
@@ -460,54 +392,13 @@ function importJsonModal(){
         saveTopics();
         alert('Đã nhập thành công ' + addedCount + ' chủ đề mới!');
         close();
-        render();
-      } else {
-        alert('Không tìm thấy dữ liệu từ vựng hợp lệ trong JSON.');
+        window.render();
       }
-    }catch(err){
-      alert('Lỗi định dạng JSON: ' + err.message);
-    }
+    }catch(err){ alert('Lỗi định dạng JSON: ' + err.message); }
   }},'Xác nhận Nhập')));
 }
 
-window.GEMINI_HOOK = {
-  enabled: true,
-  apiKey: localStorage.getItem('GEMINI_API_KEY') || '',
-  async generateImage(word, topic) {
-    if (!this.apiKey) {
-      const key = prompt('Nhập Gemini API Key của bạn (sẽ được lưu an toàn trong trình duyệt):');
-      if (key && key.trim()) {
-        this.apiKey = key.trim();
-        localStorage.setItem('GEMINI_API_KEY', this.apiKey);
-      } else {
-        return null;
-      }
-    }
-    const promptText = `Cute cartoon illustration of ${word.en} (${word.vi || ''}), pastel background, simple style for 5 year old kids, centered object, 1:1 square aspect ratio, no text, no words, no letters, high quality vector art style.`;
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${this.apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({prompt: promptText, config: {numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '1:1'}})
-      });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        alert('Lỗi tạo ảnh từ Gemini: ' + (errData.error?.message || response.statusText));
-        return null;
-      }
-      const data = await response.json();
-      if (data.generatedImages && data.generatedImages.length > 0) {
-        return 'data:image/jpeg;base64,' + data.generatedImages[0].image.imageBytes;
-      }
-      return null;
-    } catch (error) {
-      return null;
-    }
-  }
-};
-
-function modal(title,...body){const o=$('#ovl');const close=()=>{o.replaceChildren();render()};o.replaceChildren(el('div',{class:'ov'},el('div',{class:'row'},el('b',{},title),el('button',{class:'btn red',onclick:close},'✖')),...body));return close}
+function modal(title,...body){const o=$('#ovl');const close=()=>{o.replaceChildren();window.render()};o.replaceChildren(el('div',{class:'ov'},el('div',{class:'row'},el('b',{},title),el('button',{class:'btn red',onclick:close},'✖')),...body));return close}
 
 function addTopic(){
   const nameInp = el('input',{type:'text',placeholder:'Tên chủ đề (VD: Fruits)...',style:'width:100%;margin-bottom:10px'});
@@ -515,81 +406,24 @@ function addTopic(){
     const name = nameInp.value.trim();
     if(!name)return;
     const newT = { id:'t'+Date.now(), name: name, icon:'🌟', words:[{en:'Apple', vi:'Quả Táo', emoji:'🍎', sentences:[]}], sentences:[], notes:[]};
-    topics.push(newT);
+    window.topics.push(newT);
     saveTopics();
     close();
-    render();
+    window.render();
   }},'Tạo Chủ Đề')));
-}
-
-function geminiPrompt(t){
-  const p = 'Hãy tạo từng ảnh minh họa RIÊNG cho mỗi từ dưới đây. Phong cách hoạt hình dễ thương cho trẻ 5 tuổi, nền pastel đơn giản, đối tượng ở giữa, ảnh vuông 1:1, KHÔNG có chữ trong ảnh, không dùng nhân vật có bản quyền. Đặt tên mỗi file đúng bằng từ tiếng Anh (ví dụ: apple.png).\n\nDanh sách từ:\n' + t.words.map(w => '- ' + w.en + (w.vi ? ' (' + w.vi + ')' : '')).join('\n');
-  const ta=el('textarea',{readonly:'',style:'width:100%;flex:1;font:inherit;border-radius:14px;padding:10px;border:2px solid var(--pri);background:var(--card);color:var(--ink)'});ta.value=p;
-  modal('📋 Prompt cho Gemini',ta,el('div',{class:'ctl'},el('button',{class:'btn gold',onclick:()=>{ta.select();try{navigator.clipboard.writeText(p).then(()=>alert('Đã sao chép'),()=>document.execCommand('copy'))}catch(e){document.execCommand('copy')}}},'📋 Sao chép')))
-}
-
-async function putImages(t,pairs){
-  for(const[i,b64]of pairs){
-    try{
-      t.words[i].img = b64;
-    }catch(e){}
-  }
-  saveTopics();
-}
-
-function bulk(t){
-  pick(true, async files=>{
-    const pairs=[], miss=[];
-    for(let f of files){
-      const k=f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').trim().toLowerCase();
-      const i=t.words.findIndex(w=>w.en.toLowerCase()===k);
-      if(i>=0){
-        const b64 = await fileToBase64(f,800);
-        pairs.push([i,b64]);
-      } else {
-        miss.push(f.name);
-      }
-    }
-    await putImages(t,pairs);
-    alert('Đã gắn ảnh thành công.'+(miss.length?' Không khớp tên: '+miss.join(', '):''));
-    render();
-  });
-}
-
-async function autoGen(t){
-  const pairs=[];
-  for(let i=0;i<t.words.length;i++){
-    if(t.words[i].img)continue;
-    try{
-      const b=await GEMINI_HOOK.generateImage(t.words[i],t)||null;
-      if(b)pairs.push([i,b]);
-    }catch(e){}
-  }
-  await putImages(t,pairs);
-  alert('Đã tạo xong ảnh tự động!');
-  render();
-}
-
-function tools(t){
-  return el('div',{class:'bar'},
-    el('button',{class:'btn gold',onclick:()=>geminiPrompt(t)},'📋 Prompt cho Gemini'),
-    el('button',{class:'btn',onclick:()=>bulk(t)},'📤 Tải nhiều ảnh'),
-    GEMINI_HOOK.enabled?el('button',{class:'btn',onclick:()=>autoGen(t)},'🎨 Tạo ảnh tự động'):''
-  );
 }
 
 function editSentences(w){
   let sList = [...(w.sentences || [])];
   const container = el('div', {style:'display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding:4px'});
-  
   const renderList = () => {
     container.replaceChildren();
     if(sList.length === 0) container.append(el('div',{style:'opacity:0.7;font-style:italic'},'Chưa có cấu trúc câu nào.'));
     sList.forEach((s, idx) => {
       const rowDiv = el('div',{style:'display:flex;gap:6px;align-items:center;background:var(--soft);padding:6px;border-radius:10px'},
         el('div',{style:'flex:1;display:flex;flex-direction:column;gap:4px'},
-          el('input',{type:'text',value:s.en,placeholder:'Câu hỏi/trả lời (VD: A: What is this?)',style:'width:100%;font-size:14px',oninput:e=>sList[idx].en=e.target.value}),
-          el('input',{type:'text',value:s.vi,placeholder:'Dịch tiếng Việt (VD: (Hỏi: Đây là cái gì?))',style:'width:100%;font-size:14px',oninput:e=>sList[idx].vi=e.target.value})
+          el('input',{type:'text',value:s.en,placeholder:'Câu hỏi/trả lời',style:'width:100%;font-size:14px',oninput:e=>sList[idx].en=e.target.value}),
+          el('input',{type:'text',value:s.vi,placeholder:'Dịch tiếng Việt',style:'width:100%;font-size:14px',oninput:e=>sList[idx].vi=e.target.value})
         ),
         el('button',{class:'btn red',style:'padding:8px 12px;min-height:auto',onclick:()=>{sList.splice(idx,1);renderList()}},'🗑️')
       );
@@ -598,16 +432,13 @@ function editSentences(w){
   };
   renderList();
 
-  const addBtn = el('button',{class:'btn',style:'margin-top:8px',onclick:()=>{
-    sList.push({en:'', vi:''});
-    renderList();
-  }},'➕ Thêm câu mới');
+  const addBtn = el('button',{class:'btn',style:'margin-top:8px',onclick:()=>{ sList.push({en:'', vi:''}); renderList(); }},'➕ Thêm câu mới');
 
   const closeM = modal('💬 Chỉnh sửa Cấu trúc câu: ' + (w.en || w.name), container, addBtn, el('div',{class:'ctl',style:'margin-top:10px'}, el('button',{class:'btn',onclick:()=>{
     w.sentences = sList.filter(s=>s.en.trim()!=='' || s.vi.trim()!=='');
     saveTopics();
     closeM();
-    render();
+    window.render();
   }},'Lưu cấu trúc câu')));
 }
 
@@ -627,18 +458,18 @@ function sentenceBox(o, small){
 }
 
 function viewTopic(a){
-  const t=topics.find(x=>x.id===st.topic);
+  const t=window.topics.find(x=>x.id===st.topic);
   if(!t){st.topic=null;return home(a)}
   a.append(el('div',{class:'row'},
-    el('button',{class:'btn ghost',onclick:()=>{st.topic=null;render()}},'⬅️ Quay lại'),
+    el('button',{class:'btn ghost',onclick:()=>{st.topic=null;window.render()}},'⬅️ Quay lại'),
     el('b',{style:'cursor:pointer',onclick:()=>renameTopic(t),title:'Bấm để đổi tên'},(t.icon||'')+' '+t.name+' ✏️'),
     el('div',{style:'display:flex;gap:4px'},
       el('button',{class:'btn gold',style:'padding:6px 10px;min-height:auto',onclick:()=>renameTopic(t)},'✏️ Đổi tên'),
-      el('button',{class:'btn red',style:'padding:6px 10px;min-height:auto',onclick:()=>{if(confirm('Xóa chủ đề này?')){topics=topics.filter(x=>x.id!==t.id);saveTopics();st.topic=null;render()}}},'🗑️')
+      el('button',{class:'btn red',style:'padding:6px 10px;min-height:auto',onclick:()=>{if(confirm('Xóa chủ đề này?')){window.topics=window.topics.filter(x=>x.id!==t.id);saveTopics();st.topic=null;window.render()}}},'🗑️')
     )
   ));
   const g=el('div',{class:'words-grid'});
-  a.append(tools(t), sentenceBox(t));
+  a.append(sentenceBox(t));
   t.words.forEach((w,i)=>{
     const cardEl = el('div',{class:'card'},
       pic(w,e=>{say(w.en);pop(e.currentTarget)}),
@@ -648,9 +479,7 @@ function viewTopic(a){
       el('button',{class:'edit',style:'display:inline-flex;align-items:center;justify-content:center',title:'Đổi ảnh',onclick:()=>uplWordImg(t,i)},'📷'),
       el('button',{class:'edit',style:'display:inline-flex;align-items:center;justify-content:center;background:var(--gold);color:#4a1238',title:'Sửa câu',onclick:()=>editSentences(w)},'💬')
     );
-
     if((w.sentences||[]).length) cardEl.append(sentenceBox(w, true));
-
     g.append(cardEl);
   });
 
@@ -661,15 +490,10 @@ function viewTopic(a){
       const wordEn = enInp.value.trim();
       const wordVi = viInp.value.trim();
       if(wordEn){
-        t.words.push({
-          en: wordEn, 
-          vi: wordVi, 
-          emoji: '🌟', 
-          sentences:[]
-        });
+        t.words.push({ en: wordEn, vi: wordVi, emoji: '🌟', sentences:[] });
         saveTopics();
         closeM();
-        render();
+        window.render();
       }
     }},'Thêm')));
   }},'➕ Thêm từ vựng mới');
@@ -682,23 +506,23 @@ function songPage(a){
   const add=async()=>{
     const id=ytid(inp.value);
     if(!id){alert('Link YouTube chưa đúng.');return}
-    const title=prompt('Đặt tên bài hát:','Bài hát '+(songs.length+1));
+    const title=prompt('Đặt tên bài hát:','Bài hát '+(window.songs.length+1));
     if(title===null)return;
-    songs.push({id:'s'+Date.now(), vid:id, title:title||'Bài hát'});
+    window.songs.push({id:'s'+Date.now(), vid:id, title:title||'Bài hát'});
     saveSongs();
     inp.value='';
-    render();
+    window.render();
   };
   a.append(el('div',{class:'row'},inp,el('button',{class:'btn',onclick:add},'➕ Lưu')));
-  if(!songs.length)a.append(el('div',{class:'msg'},'Chưa có bài hát nào.'));
+  if(!window.songs.length)a.append(el('div',{class:'msg'},'Chưa có bài hát nào.'));
   const g=el('div',{class:'sg'});
-  songs.forEach(s=>{
+  window.songs.forEach(s=>{
     const hue=[...s.vid].reduce((x,c)=>x+c.charCodeAt(0),0)%360;
     const c=el('div',{class:'song',style:`background:hsl(${hue} 70% 48%)`},
       el('div',{class:'pl',onclick:()=>player(s)},'▶️'),
       el('div',{class:'t'},s.title),
-      el('button',{onclick:()=>{const n=prompt('Tên mới:',s.title);if(n){s.title=n;saveSongs();render()}}},'✏️ Đổi tên'),
-      el('button',{onclick:()=>{if(confirm('Xóa bài này?')){songs=songs.filter(x=>x.id!==s.id);saveSongs();render()}}},'🗑️')
+      el('button',{onclick:()=>{const n=prompt('Tên mới:',s.title);if(n){s.title=n;saveSongs();window.render()}}},'✏️ Đổi tên'),
+      el('button',{onclick:()=>{if(confirm('Xóa bài này?')){window.songs=window.songs.filter(x=>x.id!==s.id);saveSongs();window.render()}}},'🗑️')
     );
     g.append(c);
   });
@@ -710,13 +534,13 @@ function player(s){
   o.replaceChildren(el('div',{class:'ov'},
     el('div',{class:'row'},el('b',{},'🎵 '+s.title),el('button',{class:'btn red',onclick:()=>{o.replaceChildren()}},'✖ Đóng')),
     el('iframe',{class:'frame',src:'https://www.youtube.com/embed/'+s.vid+'?rel=0&playsinline=1'+(location.protocol.startsWith('http')?'&origin='+encodeURIComponent(location.origin):''),referrerpolicy:'strict-origin-when-cross-origin',allow:'autoplay; encrypted-media; fullscreen; picture-in-picture',allowfullscreen:''}),
-    el('p',{style:'text-align:center'},'Không xem được? (nếu mở file trực tiếp từ máy thì YouTube sẽ chặn) ',el('a',{href:'https://www.youtube.com/watch?v='+s.vid,target:'_blank',rel:'noopener'},'Mở trên YouTube'))
+    el('p',{style:'text-align:center'},'Không xem được? ',el('a',{href:'https://www.youtube.com/watch?v='+s.vid,target:'_blank',rel:'noopener'},'Mở trên YouTube'))
   ));
 }
 
 function reviewPage(a){
   const seen=new Set(),pool=[];
-  topics.forEach(t=>t.words.forEach(w=>{const k=w.en.toLowerCase();if(!seen.has(k)){seen.add(k);pool.push(w)}}));
+  window.topics.forEach(t=>t.words.forEach(w=>{const k=w.en.toLowerCase();if(!seen.has(k)){seen.add(k);pool.push(w)}}));
   a.append(el('div',{class:'msg'},
     el('p',{},'Kho từ vựng: '+pool.length+' từ (không trùng).'),
     el('button',{class:'btn gold',style:'font-size:20px',onclick:()=>{
@@ -725,7 +549,6 @@ function reviewPage(a){
       quiz(l);
     }},'⭐ Tạo bài ôn tập')
   ));
-  if(pool.length&&pool.length<20)a.append(el('p',{class:'vi',style:'text-align:center'},'Hiện chưa đủ 20 từ, bài ôn sẽ dùng '+pool.length+' từ.'));
 }
 
 function quiz(list){
@@ -734,7 +557,7 @@ function quiz(list){
   function draw(){
     if(i>=list.length){
       const n=ans.filter(Boolean).length;
-      cfg.stars=(cfg.stars||0)+n;save();stars();confetti(30);beep(1047,.3);
+      window.cfg.stars=(window.cfg.stars||0)+n;save();window.stars();confetti(30);beep(1047,.3);
       o.replaceChildren(el('div',{class:'ov'},
         el('div',{class:'big'},
           el('div',{style:'font-size:90px'},n>=list.length*.7?'🏆':'🌟'),
@@ -762,12 +585,8 @@ function quiz(list){
   draw();
 }
 
-try{
-  drawBar();
-  render();
-}catch(e){console.error(e);}
+try{ drawBar(); window.render(); }catch(e){console.error(e);}
 
-/* ===== Linh vật động: Bé Dơi Tím (nhân vật gốc) + ô tải ảnh riêng ===== */
 (function(){
   const SVG=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Bé Dơi Tím">
 <g class="wing-l"><path d="M34 62 Q4 34 8 82 Q16 72 24 86 Q26 74 36 78 Z" fill="#4b1d7a"/></g>
@@ -793,7 +612,7 @@ try{
     const img=get();
     if(img){const i=document.createElement('img');i.className='m-img';i.src=img;i.alt='Linh vật';inn.append(i)}else inn.innerHTML=SVG;
     const bub=document.createElement('div');bub.className='bubble';
-    const btn=document.createElement('button');btn.className='mbtn';btn.title=img?'Đổi / xóa ảnh linh vật':'Dùng ảnh linh vật của bạn';btn.textContent='🖼️';
+    const btn=document.createElement('button');btn.className='mbtn';btn.title='Dùng ảnh linh vật';btn.textContent='🖼️';
     btn.onclick=e=>{e.stopPropagation();pick()};
     box.append(bub,inn,btn);
     box.onclick=()=>{
@@ -805,13 +624,13 @@ try{
     document.body.append(box);
   }
   function pick(){
-    if(get()&&confirm('Xóa ảnh linh vật riêng và quay về Bé Dơi Tím?\nBấm Hủy để chọn ảnh khác.')){try{localStorage.removeItem(KEY)}catch(e){};build();return}
+    if(get()&&confirm('Quay về Linh vật gốc?')){try{localStorage.removeItem(KEY)}catch(e){};build();return}
     const f=document.createElement('input');f.type='file';f.accept='image/*';
     f.onchange=()=>{const file=f.files[0];if(!file)return;const r=new FileReader();
       r.onload=()=>{const im=new Image();im.onload=()=>{
         const S=240,k=Math.min(1,S/Math.max(im.width,im.height)),c=document.createElement('canvas');
         c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-        try{localStorage.setItem(KEY,c.toDataURL('image/png'))}catch(e){alert('Không lưu được ảnh.')}
+        try{localStorage.setItem(KEY,c.toDataURL('image/png'))}catch(e){}
         build()};im.src=r.result};r.readAsDataURL(file)};
     f.click();
   }
@@ -819,25 +638,5 @@ try{
   build();
 })();
 </script>
-
-<!-- Cấu hình Firebase SDK (an toàn, không chứa khóa bí mật Google Cloud) -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
-      authDomain: "app-hoc-tieng-anh-b.firebaseapp.com",
-      projectId: "app-hoc-tieng-anh-b",
-      storageBucket: "app-hoc-tieng-anh-b.firebasestorage.app",
-      messagingSenderId: "515402968386",
-      appId: "1:515402968386:web:f084580b5ac64118f92cdb",
-      measurementId: "G-TKSEBV4YY4"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-</script>
-
 </body>
 </html>

@@ -199,7 +199,7 @@ function fileToBase64(file, maxDim) {
       c.width = Math.round(bm.width * k);
       c.height = Math.round(bm.height * k);
       c.getContext('2d').drawImage(bm, 0, 0, c.width, c.height);
-      resolve(c.toDataURL('image/jpeg', 0.85));
+      resolve(c.toDataURL('image/jpeg', 0.7));
     }).catch(reject);
   });
 }
@@ -228,8 +228,8 @@ function pop(e){e.classList.remove('pop');void e.offsetWidth;e.classList.add('po
 function confetti(n){const f=['⭐','🎈','✨','🎉','🔔'];for(let i=0;i<n;i++){const s=el('div',{class:'cf'},f[i%5]);s.style.left=Math.random()*100+'%';s.style.animationDuration=(1.5+Math.random()*1.5)+'s';s.style.fontSize=(20+Math.random()*24)+'px';document.body.append(s);setTimeout(()=>s.remove(),3200)}}
 function cheer(){beep(880,.2);setTimeout(()=>beep(1175,.3),120);confetti(8)}
 
-function uplWordImg(t,i){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.words[i].img=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
-function uplTopicImg(t){pick(false,async([f])=>{try{const b64=await fileToBase64(f,800);t.coverImg=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
+function uplWordImg(t,i){pick(false,async([f])=>{try{const b64=await fileToBase64(f,480);t.words[i].img=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
+function uplTopicImg(t){pick(false,async([f])=>{try{const b64=await fileToBase64(f,480);t.coverImg=b64;saveTopics();window.render()}catch(e){alert('Tải ảnh lỗi, thử lại.')}})}
 
 function renameTopic(t){
   const inp=el('input',{type:'text',value:t.name,style:'width:100%;margin-bottom:10px'});
@@ -580,10 +580,10 @@ function quiz(list){
 })();
 </script>
 
-<!-- Firestore Cloud Sync Engine -->
+<!-- Firestore Cloud Sync Engine (v2: mỗi chủ đề 1 document, có báo lỗi hiển thị) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyD0Oqk_UFWZ2OKX6LMQQnAysPologoOVE0",
@@ -597,71 +597,158 @@ function quiz(list){
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const docRef = doc(db, "appData", "main");
+  const col = collection(db, "appData");          // giữ nguyên collection cũ
+  const songsRef = doc(db, "appData", "songs");
+  const cfgRef = doc(db, "appData", "cfg");
+  const legacyId = "main";                         // document cũ (v1), chỉ đọc để chuyển dữ liệu
 
-  let isRemoteUpdating = false;
+  // Có dữ liệu thật ở máy này trước khi tải app không? (để quyết định có đẩy lên cloud hay không)
+  const hadLocalTopics = !!localStorage.getItem('topics');
+  const hadLocalSongs = !!localStorage.getItem('songs');
 
-  window.save = function() {
-    try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch(e){}
-    if (!isRemoteUpdating) {
-      setDoc(docRef, {
-        topics: window.topics || [],
-        songs: window.songs || [],
-        cfg: window.cfg || {}
-      }).catch(err => console.error("Firestore Save Error:", err));
+  let ready = false;                               // true sau khi nhận snapshot đầu tiên từ cloud
+  const topicCache = new Map();                    // id -> JSON đã có trên cloud (để chỉ ghi phần thay đổi)
+  let songsCache = null;
+
+  // ---- Badge trạng thái đồng bộ (hiển thị lỗi, không còn lỗi âm thầm) ----
+  const badge = document.createElement('div');
+  badge.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 10px;border-radius:14px;font:600 12px sans-serif;background:#fff;box-shadow:0 2px 6px #0004;max-width:70vw';
+  document.body.appendChild(badge);
+  let errShown = false;
+  function setStatus(kind, msg) {
+    badge.textContent = (kind === 'ok' ? '☁️ ' : kind === 'wait' ? '⏳ ' : '⚠️ ') + msg;
+    badge.style.color = kind === 'err' ? '#b00020' : '#333';
+  }
+  function fail(where, err) {
+    console.error('Firestore ' + where + ':', err);
+    const code = (err && err.code) || (err && err.message) || 'unknown';
+    setStatus('err', 'Lỗi đồng bộ (' + code + ')');
+    if (!errShown) {
+      errShown = true;
+      alert('⚠️ Không đồng bộ được lên cloud.\nMã lỗi: ' + code +
+        '\n• permission-denied → kiểm tra Firestore Rules\n• invalid-argument → dữ liệu (ảnh) quá lớn\n• unavailable → mất mạng');
     }
+  }
+  setStatus('wait', 'Đang kết nối...');
+
+  const sizeOf = o => new Blob([JSON.stringify(o)]).size;
+
+  // ---- Ghi lên cloud ----
+  function pushTopics() {
+    if (!ready) return;                            // chưa biết cloud có gì → không ghi đè
+    const list = window.topics || [];
+    const alive = new Set();
+    list.forEach((t, i) => {
+      alive.add(t.id);
+      const obj = Object.assign({}, t, { order: i });
+      const json = JSON.stringify(obj);
+      if (topicCache.get(t.id) === json) return;   // không đổi → bỏ qua
+      if (json.length > 950000) {                  // giới hạn Firestore ~1MiB / document
+        fail('topic quá lớn', { code: 'topic "' + t.name + '" quá 1MB, hãy bớt ảnh' });
+        return;
+      }
+      topicCache.set(t.id, json);
+      setStatus('wait', 'Đang lưu...');
+      setDoc(doc(db, "appData", "topic_" + t.id), obj)
+        .then(() => setStatus('ok', 'Đã đồng bộ'))
+        .catch(err => { topicCache.delete(t.id); fail('ghi chủ đề', err); });
+    });
+    [...topicCache.keys()].forEach(id => {
+      if (!alive.has(id)) {
+        topicCache.delete(id);
+        deleteDoc(doc(db, "appData", "topic_" + id)).catch(err => fail('xóa chủ đề', err));
+      }
+    });
+  }
+
+  function pushSongs() {
+    if (!ready) return;
+    const json = JSON.stringify(window.songs || []);
+    if (json === songsCache) return;
+    songsCache = json;
+    setDoc(songsRef, { songs: window.songs || [] })
+      .then(() => setStatus('ok', 'Đã đồng bộ'))
+      .catch(err => { songsCache = null; fail('ghi bài hát', err); });
+  }
+
+  function pushCfg() {
+    if (!ready) return;
+    // Chỉ đồng bộ số sao. Giọng đọc/tốc độ khác nhau theo từng thiết bị nên giữ riêng ở máy.
+    setDoc(cfgRef, { stars: Number(window.cfg.stars) || 0 })
+      .catch(err => fail('ghi số sao', err));
+  }
+
+  window.save = function () {
+    try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch (e) {}
+    pushCfg();
+  };
+  window.saveTopics = function () {
+    try { localStorage.setItem('topics', JSON.stringify(window.topics)); } catch (e) {}
+    pushTopics();
+  };
+  window.saveSongs = function () {
+    try { localStorage.setItem('songs', JSON.stringify(window.songs)); } catch (e) {}
+    pushSongs();
   };
 
-  window.saveTopics = function() {
-    try { localStorage.setItem('topics', JSON.stringify(window.topics)); } catch(e){}
-    if (!isRemoteUpdating) {
-      setDoc(docRef, {
-        topics: window.topics || [],
-        songs: window.songs || [],
-        cfg: window.cfg || {}
-      }).catch(err => console.error("Firestore Save Topics Error:", err));
-    }
-  };
+  // ---- Nhận từ cloud ----
+  let first = true;
+  onSnapshot(col, (snap) => {
+    if (snap.metadata.hasPendingWrites && !first) return;   // bỏ qua "tiếng vọng" của chính mình
+    const docs = {};
+    snap.forEach(d => { docs[d.id] = d.data(); });
 
-  window.saveSongs = function() {
-    try { localStorage.setItem('songs', JSON.stringify(window.songs)); } catch(e){}
-    if (!isRemoteUpdating) {
-      setDoc(docRef, {
-        topics: window.topics || [],
-        songs: window.songs || [],
-        cfg: window.cfg || {}
-      }).catch(err => console.error("Firestore Save Songs Error:", err));
-    }
-  };
+    const topicDocs = Object.keys(docs).filter(k => k.startsWith('topic_'))
+      .map(k => docs[k]).sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(t => { const o = Object.assign({}, t); delete o.order; return o; });
 
-  onSnapshot(docRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const remoteData = snapshot.data();
-      isRemoteUpdating = true;
-      if (remoteData.topics) {
-        window.topics = remoteData.topics;
-        try { localStorage.setItem('topics', JSON.stringify(remoteData.topics)); } catch(e){}
+    if (first) {
+      first = false;
+      const legacy = docs[legacyId];
+      if (topicDocs.length === 0) {
+        // Cloud chưa có chủ đề nào theo cấu trúc mới
+        if (legacy && Array.isArray(legacy.topics) && legacy.topics.length) {
+          window.topics = legacy.topics;                     // chuyển từ document cũ
+        } else if (!hadLocalTopics) {
+          // máy này cũng chưa có gì → giữ dữ liệu mẫu, KHÔNG đẩy lên cloud
+        }
+        ready = true;
+        if (hadLocalTopics || (legacy && legacy.topics)) pushTopics();   // đẩy dữ liệu thật lên cloud
+      } else {
+        window.topics = topicDocs;                           // cloud là nguồn chuẩn
+        ready = true;
       }
-      if (remoteData.songs) {
-        window.songs = remoteData.songs;
-        try { localStorage.setItem('songs', JSON.stringify(remoteData.songs)); } catch(e){}
+      if (!docs.songs) {
+        if (legacy && Array.isArray(legacy.songs) && !hadLocalSongs) window.songs = legacy.songs;
+        ready = true;
+        if (hadLocalSongs || (legacy && legacy.songs && legacy.songs.length)) { songsCache = null; pushSongs(); }
       }
-      if (remoteData.cfg) {
-        window.cfg = remoteData.cfg;
-        try { localStorage.setItem('cfg', JSON.stringify(remoteData.cfg)); } catch(e){}
-      }
-      if (window.render) window.render();
-      if (window.stars) window.stars();
-      setTimeout(() => { isRemoteUpdating = false; }, 300);
+      topicDocs.forEach(t => topicCache.set(t.id, JSON.stringify(Object.assign({}, t, { order: topicDocs.indexOf(t) }))));
+    } else {
+      window.topics = topicDocs.length ? topicDocs : window.topics;
+      topicCache.clear();
+      topicDocs.forEach((t, i) => topicCache.set(t.id, JSON.stringify(Object.assign({}, t, { order: i }))));
     }
-  }, (error) => {
-    console.error("Firestore Snapshot Error:", error);
-  });
+
+    if (docs.songs && Array.isArray(docs.songs.songs)) {
+      window.songs = docs.songs.songs;
+      songsCache = JSON.stringify(window.songs);
+    }
+    if (docs.cfg && docs.cfg.stars !== undefined) window.cfg.stars = Number(docs.cfg.stars) || 0;
+
+    try { localStorage.setItem('topics', JSON.stringify(window.topics)); } catch (e) {}
+    try { localStorage.setItem('songs', JSON.stringify(window.songs)); } catch (e) {}
+    try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch (e) {}
+
+    setStatus('ok', 'Đã đồng bộ');
+    if (window.render) window.render();
+    if (window.stars) window.stars();
+  }, (err) => fail('đọc dữ liệu', err));
 
   try {
     drawBar();
     window.render();
-  } catch(e) { console.error(e); }
+  } catch (e) { console.error(e); }
 </script>
 
 </body>

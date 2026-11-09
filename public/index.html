@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>Bé học tiếng Anh</title>
+<title>Học tiếng Anh cùng Hà My</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap">
 <style>
 :root{--bg1:#c79cf2;--bg2:#fde8f6;--card:#fff;--ink:#2d1546;--pri:#7b2cbf;--red:#e53935;--gold:#ff8fc7;--soft:#f4e6fc;
@@ -19,10 +19,9 @@ body{margin:0;min-height:100vh;font-family:"Be Vietnam Pro","Segoe UI",system-ui
 @keyframes drift{from{transform:translateX(-120px)}to{transform:translateX(110vw)}}
 @keyframes tw{50%{opacity:.2;transform:scale(.7)}}
 @keyframes bob{50%{transform:translateY(-8px)}}
-main{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:12px 14px 130px}
+main{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:12px 14px 270px}
 h1{margin:6px 0;font-size:28px;text-align:center}
 h1 span{display:inline-block}
-#bell{font-size:40px;cursor:pointer;animation:bob 2s ease-in-out infinite;transform-origin:top center}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:8px;justify-content:center;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));background:var(--card);border-radius:28px 28px 0 0;box-shadow:0 -4px 0 #0002}
 button{font:inherit;color:inherit;cursor:pointer}
 nav button{flex:1;max-width:220px;min-height:76px;border:0;border-radius:24px;background:var(--soft);font-weight:800;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .15s}
@@ -98,7 +97,7 @@ a{color:var(--pri);font-weight:700}
 .topic-edit{position:absolute;top:6px;right:6px;background:var(--card);border:1px solid var(--pri);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;z-index:2;box-shadow:0 2px 4px #0002}
 .ctl .btn{min-height:64px}
 .btn{min-height:48px}
-.mascot{position:fixed;right:6px;bottom:calc(112px + env(safe-area-inset-bottom,0px));width:84px;z-index:4;cursor:pointer;animation:mfloat 3s ease-in-out infinite;-webkit-tap-highlight-color:transparent}
+.mascot{position:fixed;right:6px;bottom:calc(112px + env(safe-area-inset-bottom,0px));width:clamp(120px,34vw,170px);z-index:4;cursor:pointer;animation:mfloat 3s ease-in-out infinite;-webkit-tap-highlight-color:transparent}
 .mascot .m-in{width:100%}.mascot svg,.mascot .m-img{width:100%;height:auto;display:block;filter:drop-shadow(0 4px 0 #0003)}
 .mascot .m-img{border-radius:50%;aspect-ratio:1;object-fit:cover;animation:sway 2.4s ease-in-out infinite}
 .mascot.hop .m-in{animation:mhop .6s}
@@ -114,13 +113,32 @@ a{color:var(--pri);font-weight:700}
 @keyframes mfloat{50%{transform:translateY(-10px)}}
 @keyframes mhop{30%{transform:translateY(-26px) rotate(-8deg)}60%{transform:translateY(0) rotate(6deg)}}
 @keyframes sway{50%{transform:rotate(6deg)}}
-@media (prefers-reduced-motion:reduce){.mascot,.mascot *{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.mascot,.mascot *,.brand-row,.brand-row::after{animation:none!important}}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:8px;margin:8px 0 4px}
+.brand-row{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:14px;max-width:100%;padding:12px 20px 12px 12px;border-radius:28px;
+  background:linear-gradient(135deg,rgba(255,255,255,.58),rgba(255,255,255,.22));
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);
+  border:1.5px solid rgba(255,255,255,.75);
+  box-shadow:0 10px 30px rgba(74,18,56,.18),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.25);
+  animation:cardfloat 4s ease-in-out infinite}
+.brand-row::after{content:'';position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:glint 5.5s ease-in-out infinite;pointer-events:none}
+@keyframes cardfloat{50%{transform:translateY(-5px)}}
+@keyframes glint{0%,55%{left:-60%}100%{left:130%}}
+.brand-name{min-width:0;text-align:left;font-weight:900;font-size:clamp(22px,6vw,34px);line-height:1.2;color:#4a1238;text-shadow:0 1px 0 rgba(255,255,255,.75)}
+.avatar{flex:0 0 auto;width:88px;height:88px;border-radius:22px;border:3px solid rgba(255,255,255,.95);background:rgba(255,255,255,.5);box-shadow:0 6px 16px rgba(74,18,56,.25);padding:0;overflow:hidden;font-size:36px;display:inline-flex;align-items:center;justify-content:center}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.mascot .m-video{border-radius:28px;animation:none;object-fit:cover}
+.mascot.syncerr::after{content:'';position:absolute;right:4px;top:4px;width:18px;height:18px;border-radius:50%;background:#e53935;border:3px solid #fff;box-shadow:0 2px 4px #0004}
+.syncpop{position:fixed;right:8px;z-index:50;max-width:min(78vw,320px);background:#fff;color:#4a1238;border-radius:16px;padding:10px 14px;font-size:15px;line-height:1.4;box-shadow:0 4px 0 #0003,0 8px 20px #0003;border:3px solid var(--gold)}
+.syncpop.err{border-color:#e53935}.syncpop.ok{border-color:#2e7d32}
+.syncpop small{display:block;opacity:.85;margin-top:2px}
 </style>
 </head>
 <body>
 <div class="sky" id="sky"></div>
 <main>
-  <h1><span id="bell">🔔</span> Bé học tiếng Anh <span class="stars" id="stars">⭐ 0</span></h1>
+  <h1 class="brand"><div class="brand-row"><button class="avatar" id="avatar" type="button" title="Bấm để thêm ảnh bé">📷</button><span class="brand-name">Học tiếng Anh cùng&nbsp;Hà&nbsp;My</span></div><span class="stars" id="stars">⭐ 0</span></h1>
   <nav id="nav"></nav>
   <div class="bar" id="vbar"></div>
   <div id="app"></div>
@@ -239,11 +257,32 @@ function renameTopic(t){
   }},'Lưu tên')));
 }
 
-const bellEl=$('#bell');if(bellEl)bellEl.addEventListener('click',jingle);
 
 const MASCOT_KEY='mascot_img';
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
+
+const AV_KEY='avatar_img';
+window.drawAvatar=function(){const b=$('#avatar');if(!b)return;const v=lsGet(AV_KEY);b.replaceChildren();if(v)b.append(el('img',{src:v,alt:'Hà My'}));else b.textContent='📷'};
+(function(){
+  const b=$('#avatar');if(!b)return;
+  b.addEventListener('click',()=>{
+    if(lsGet(AV_KEY)&&confirm('Xóa ảnh hiện tại của bé? (Bấm Hủy để chọn ảnh mới)')){
+      try{localStorage.removeItem(AV_KEY)}catch(e){}
+      drawAvatar();if(window.saveAvatar)window.saveAvatar();return;
+    }
+    pick(false,async([f])=>{
+      try{
+        const bm=await createImageBitmap(f),S=200,m=Math.min(bm.width,bm.height);
+        const c=document.createElement('canvas');c.width=c.height=S;
+        c.getContext('2d').drawImage(bm,(bm.width-m)/2,(bm.height-m)/2,m,m,0,0,S,S);
+        lsSet(AV_KEY,c.toDataURL('image/jpeg',0.8));
+        drawAvatar();if(window.saveAvatar)window.saveAvatar();
+      }catch(e){alert('Tải ảnh lỗi, thử lại.')}
+    });
+  });
+  drawAvatar();
+})();
 
 function collectBackup(){
   const {stars:_s, ...settings} = window.cfg;
@@ -293,7 +332,6 @@ function home(a){
     el('button',{class:'btn',style:'flex:1;min-width:140px;font-size:14px;background:#2e7d32',onclick:exportFullBackup},'💾 Backup Toàn Bộ App'),
     el('button',{class:'btn ghost',style:'flex:1;min-width:140px;font-size:14px',onclick:importFullBackup},'🔄 Restore Backup')
   );
-  a.append(topBar);
 
   const g=el('div',{class:'grid'});
   window.topics.forEach((t,i)=>{
@@ -307,6 +345,8 @@ function home(a){
   });
   g.append(el('div',{class:'tile add',onclick:addTopic},el('div',{class:'ic'},st.busy?'⏳':'➕'),el('div',{class:'nm'},st.busy||'Thêm chủ đề')));
   a.append(g);
+  topBar.style.marginTop='28px';
+  a.append(topBar);
 }
 
 const GEMINI_JSON_PROMPT = `Bạn là trợ lý chuyển đề cương tiếng Anh mầm non thành JSON. Tôi gửi kèm ảnh đề cương. Hãy đọc kỹ ảnh và chỉ trả về MỘT khối JSON (không giải thích thêm), đúng cấu trúc:
@@ -402,15 +442,10 @@ function sentenceBox(o, small){
 
 
 function imgPromptFor(t){
-  const list=(t.words||[]).map((w,i)=>(i+1)+'. '+w.en+(w.vi?' ('+String(w.vi).replace(/^\(|\)$/g,'')+')':'')).join('\n');
-  return 'Bạn hãy vẽ minh họa từ vựng tiếng Anh cho bé 5 tuổi, chủ đề "'+t.name+'".\n'
-  +'Mỗi từ dưới đây vẽ thành 1 ảnh riêng (tạo lần lượt từng ảnh, mỗi ảnh 1 từ):\n'+list+'\n\n'
-  +'Yêu cầu chung cho mọi ảnh:\n'
-  +'- Phong cách hoạt hình dễ thương, nét tròn, màu tươi sáng, đồng nhất giữa các ảnh\n'
-  +'- Chỉ có 1 đối tượng chính ở giữa, nền trơn màu sáng, đơn giản\n'
-  +'- Tỉ lệ khung hình vuông 1:1\n'
-  +'- Tuyệt đối KHÔNG chèn chữ, số, logo hay watermark vào ảnh\n'
-  +'- Nội dung an toàn, thân thiện với trẻ em\n';
+  const ws=(t.words||[]);
+  const ex=ws.length&&ws[0].en?String(ws[0].en).trim().toLowerCase():'apple';
+  const list=ws.map(w=>{const vi=String(w.vi||'').trim().replace(/^\(|\)$/g,'');return '* '+w.en+(vi?' ('+vi+')':'')}).join('\n');
+  return 'Hãy tạo từng ảnh minh họa RIÊNG cho mỗi từ dưới đây, nền pastel đơn giản, đối tượng ở giữa, ảnh vuông 1:1, KHÔNG có chữ trong ảnh, không dùng nhân vật có bản quyền. Đặt tên mỗi file đúng bằng từ tiếng Anh (ví dụ: '+ex+'.png).\n\nDanh sách từ:\n\n'+list;
 }
 function imgPromptModal(t){
   const text=imgPromptFor(t);
@@ -585,17 +620,50 @@ function quiz(list){
 <path d="M55 83 L57 90 L60 84 Z" fill="#fff"/>
 <g transform="translate(88 20)"><path d="M0 0 L-14 -8 L-14 8 Z" fill="#ff5fae"/><path d="M0 0 L14 -8 L14 8 Z" fill="#ff5fae"/><circle r="5" fill="#ff8fc7"/></g>
 </svg>`;
-  const KEY='mascot_img', LINES=["Hello!","Good job!","Let's learn!","Wow!","I love English!"];
-  let box,timer;
+  const KEY='mascot_img', VKEY='mascot_video', LINES=["Hello!","Good job!","Let's learn!","Wow!","I love English!"];
+  let box,timer,vurl,hasVideo=false,seq=0;
   const get=()=>{try{return localStorage.getItem(KEY)}catch(e){return null}};
-  function build(){
+  // Video quá lớn cho localStorage nên lưu bằng IndexedDB (chỉ trên máy này)
+  const idb=()=>new Promise((res,rej)=>{const r=indexedDB.open('behoc_media',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+  const idbGet=async k=>{const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error)})};
+  const idbSet=async(k,v)=>{const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})};
+  const idbDel=async k=>{const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})};
+  const hintFor=c=>/permission/i.test(c)?'Kiểm tra Firestore Rules (có thể đã hết hạn).':/invalid-argument|1MB/i.test(c)?'Dữ liệu (ảnh) quá lớn, hãy bớt hoặc giảm ảnh.':/unavailable|network|offline|10 giây/i.test(c)?'Mất mạng hoặc không kết nối được Firebase.':'Mở Console (F12) để xem chi tiết.';
+  function showSync(){
+    const old=document.querySelector('.syncpop');if(old)old.remove();
+    const s=window.syncState||{kind:'wait',code:'',time:0};
+    const pop=document.createElement('div');pop.className='syncpop '+s.kind;
+    const t=document.createElement('b');
+    t.textContent=s.kind==='ok'?'☁️ Đã đồng bộ':s.kind==='err'?'⚠️ Chưa đồng bộ':'⏳ Đang đồng bộ...';
+    pop.append(t);
+    const add=x=>{const m=document.createElement('small');m.textContent=x;pop.append(m)};
+    if(s.kind==='ok'&&s.time)add('Cập nhật lúc '+new Date(s.time).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+    if(s.kind==='err'){add('Lỗi: '+s.code);add(hintFor(String(s.code)))}
+    const r=box.getBoundingClientRect();pop.style.bottom=(innerHeight-r.top+8)+'px';
+    pop.onclick=()=>pop.remove();document.body.append(pop);
+    setTimeout(()=>pop.remove(),7000);
+  }
+  async function build(){
+    const my=++seq;
+    let vblob=null;try{vblob=await idbGet(VKEY)}catch(e){}
+    if(my!==seq)return;
     if(box)box.remove();
+    if(vurl){URL.revokeObjectURL(vurl);vurl=null}
+    hasVideo=!!vblob;
     box=document.createElement('div');box.className='mascot';
+    if(window.syncState&&window.syncState.kind==='err')box.classList.add('syncerr');
     const inn=document.createElement('div');inn.className='m-in';
     const img=get();
-    if(img){const i=document.createElement('img');i.className='m-img';i.src=img;i.alt='Linh vật';inn.append(i)}else inn.innerHTML=SVG;
+    if(vblob){
+      vurl=URL.createObjectURL(vblob);
+      const v=document.createElement('video');v.className='m-img m-video';v.src=vurl;
+      v.muted=true;v.loop=true;v.autoplay=true;v.playsInline=true;
+      v.setAttribute('playsinline','');v.setAttribute('muted','');
+      inn.append(v);v.play().catch(()=>{});
+    }else if(img){const i=document.createElement('img');i.className='m-img';i.src=img;i.alt='Linh vật';inn.append(i)}
+    else inn.innerHTML=SVG;
     const bub=document.createElement('div');bub.className='bubble';
-    const btn=document.createElement('button');btn.className='mbtn';btn.title='Dùng ảnh linh vật';btn.textContent='🖼️';
+    const btn=document.createElement('button');btn.className='mbtn';btn.title='Đổi linh vật (ảnh hoặc video)';btn.textContent='📷';
     btn.onclick=e=>{e.stopPropagation();pick()};
     box.append(bub,inn,btn);
     box.onclick=()=>{
@@ -603,18 +671,28 @@ function quiz(list){
       bub.textContent=t;box.classList.remove('hop');void box.offsetWidth;box.classList.add('hop','talk');
       try{say(t)}catch(e){}
       clearTimeout(timer);timer=setTimeout(()=>box.classList.remove('talk','hop'),1800);
+      showSync();
     };
     document.body.append(box);
   }
   function pick(){
-    if(get()&&confirm('Quay về Linh vật gốc?')){try{localStorage.removeItem(KEY)}catch(e){};build();return}
-    const f=document.createElement('input');f.type='file';f.accept='image/*';
-    f.onchange=()=>{const file=f.files[0];if(!file)return;const r=new FileReader();
+    if((get()||hasVideo)&&confirm('Quay về Linh vật gốc? (Bấm Hủy để chọn ảnh/video mới)')){
+      try{localStorage.removeItem(KEY)}catch(e){}
+      idbDel(VKEY).catch(()=>{}).then(()=>build());return;
+    }
+    const f=document.createElement('input');f.type='file';f.accept='image/*,video/*';
+    f.onchange=()=>{const file=f.files[0];if(!file)return;
+      if(file.type.startsWith('video/')){
+        if(file.size>25*1024*1024){alert('Video quá nặng ('+Math.round(file.size/1048576)+'MB). Hãy chọn video ngắn dưới 25MB (khoảng 5–10 giây).');return}
+        idbSet(VKEY,file).then(()=>build()).catch(()=>alert('Không lưu được video trên máy này, thử video nhỏ hơn.'));
+        return;
+      }
+      const r=new FileReader();
       r.onload=()=>{const im=new Image();im.onload=()=>{
         const S=240,k=Math.min(1,S/Math.max(im.width,im.height)),c=document.createElement('canvas');
         c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
         try{localStorage.setItem(KEY,c.toDataURL('image/png'))}catch(e){}
-        build()};im.src=r.result};r.readAsDataURL(file)};
+        idbDel(VKEY).catch(()=>{}).then(()=>build())};im.src=r.result};r.readAsDataURL(file)};
     f.click();
   }
   window.rebuildMascot=build;
@@ -652,26 +730,19 @@ function quiz(list){
   const topicCache = new Map();                    // id -> JSON đã có trên cloud (để chỉ ghi phần thay đổi)
   let songsCache = null;
 
-  // ---- Badge trạng thái đồng bộ (hiển thị lỗi, không còn lỗi âm thầm) ----
-  const badge = document.createElement('div');
-  badge.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 10px;border-radius:14px;font:600 12px sans-serif;background:#fff;box-shadow:0 2px 6px #0004;max-width:70vw';
-  document.body.appendChild(badge);
-  let errShown = false;
-  function setStatus(kind, msg) {
-    badge.textContent = (kind === 'ok' ? '☁️ ' : kind === 'wait' ? '⏳ ' : '⚠️ ') + msg;
-    badge.style.color = kind === 'err' ? '#b00020' : '#333';
+  // ---- Trạng thái đồng bộ: lưu ở window.syncState, bấm vào linh vật để xem ----
+  window.syncState = { kind: 'wait', code: '', time: 0 };
+  function setStatus(kind, code) {
+    window.syncState = { kind, code: kind === 'err' ? String(code || '') : '', time: kind === 'ok' ? Date.now() : (window.syncState.time || 0) };
+    const m = document.querySelector('.mascot');
+    if (m) m.classList.toggle('syncerr', kind === 'err');
   }
   function fail(where, err) {
     console.error('Firestore ' + where + ':', err);
-    const code = (err && err.code) || (err && err.message) || 'unknown';
-    setStatus('err', 'Lỗi đồng bộ (' + code + ')');
-    if (!errShown) {
-      errShown = true;
-      alert('⚠️ Không đồng bộ được lên cloud.\nMã lỗi: ' + code +
-        '\n• permission-denied → kiểm tra Firestore Rules\n• invalid-argument → dữ liệu (ảnh) quá lớn\n• unavailable → mất mạng');
-    }
+    setStatus('err', (err && err.code) || (err && err.message) || 'unknown');
   }
-  setStatus('wait', 'Đang kết nối...');
+  setStatus('wait');
+  setTimeout(() => { if (!ready) setStatus('err', 'unavailable: không nhận được phản hồi từ Firebase sau 10 giây'); }, 10000);
 
   const sizeOf = o => new Blob([JSON.stringify(o)]).size;
 
@@ -690,9 +761,9 @@ function quiz(list){
         return;
       }
       topicCache.set(t.id, json);
-      setStatus('wait', 'Đang lưu...');
+      setStatus('wait');
       setDoc(doc(db, "appData", "topic_" + t.id), obj)
-        .then(() => setStatus('ok', 'Đã đồng bộ'))
+        .then(() => setStatus('ok'))
         .catch(err => { topicCache.delete(t.id); fail('ghi chủ đề', err); });
     });
     [...topicCache.keys()].forEach(id => {
@@ -709,16 +780,23 @@ function quiz(list){
     if (json === songsCache) return;
     songsCache = json;
     setDoc(songsRef, { songs: window.songs || [] })
-      .then(() => setStatus('ok', 'Đã đồng bộ'))
+      .then(() => setStatus('ok'))
       .catch(err => { songsCache = null; fail('ghi bài hát', err); });
   }
 
   function pushCfg() {
     if (!ready) return;
-    // Chỉ đồng bộ số sao. Giọng đọc/tốc độ khác nhau theo từng thiết bị nên giữ riêng ở máy.
-    setDoc(cfgRef, { stars: Number(window.cfg.stars) || 0 })
+    // Chỉ đồng bộ số sao (merge để không đè ảnh bé). Giọng đọc/tốc độ giữ riêng từng máy.
+    setDoc(cfgRef, { stars: Number(window.cfg.stars) || 0 }, { merge: true })
       .catch(err => fail('ghi số sao', err));
   }
+  window.saveAvatar = function () {
+    if (!ready) return;
+    const v = localStorage.getItem('avatar_img') || '';
+    setDoc(cfgRef, { avatar: v }, { merge: true })
+      .then(() => setStatus('ok'))
+      .catch(err => fail('ghi ảnh bé', err));
+  };
 
   window.save = function () {
     try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch (e) {}
@@ -776,13 +854,21 @@ function quiz(list){
       window.songs = docs.songs.songs;
       songsCache = JSON.stringify(window.songs);
     }
+    let needAvatarPush = false;
     if (docs.cfg && docs.cfg.stars !== undefined) window.cfg.stars = Number(docs.cfg.stars) || 0;
+    if (docs.cfg && typeof docs.cfg.avatar === 'string') {
+      try { if (docs.cfg.avatar) localStorage.setItem('avatar_img', docs.cfg.avatar); else localStorage.removeItem('avatar_img'); } catch (e) {}
+    } else if (localStorage.getItem('avatar_img')) {
+      needAvatarPush = true;                       // cloud chưa có ảnh bé → đẩy ảnh của máy này lên
+    }
 
     try { localStorage.setItem('topics', JSON.stringify(window.topics)); } catch (e) {}
     try { localStorage.setItem('songs', JSON.stringify(window.songs)); } catch (e) {}
     try { localStorage.setItem('cfg', JSON.stringify(window.cfg)); } catch (e) {}
 
-    setStatus('ok', 'Đã đồng bộ');
+    setStatus('ok');
+    if (window.drawAvatar) window.drawAvatar();
+    if (needAvatarPush && window.saveAvatar) window.saveAvatar();
     if (window.render) window.render();
     if (window.stars) window.stars();
   }, (err) => fail('đọc dữ liệu', err));
